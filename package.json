@@ -1,0 +1,24 @@
+{
+  "name": "what-is-the-latency",
+  "version": "0.0.0",
+  "description": "Calculate the processing latency",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cloudinsight/what-is-the-latency.git"
+  },
+  "keywords": [],
+  "author": "wyvernnot <wyvernnot@gmail.com> (http://wyvernnot.github.io/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/cloudinsight/what-is-the-latency/issues"
+  },
+  "homepage": "https://github.com/cloudinsight/what-is-the-latency#readme",
+  "dependencies": {
+    "lodash.isnull": "^3.0.0",
+    "request": "^2.79.0"
+  }
+}
