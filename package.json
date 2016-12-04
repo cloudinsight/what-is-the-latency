@@ -19,6 +19,7 @@
   "homepage": "https://github.com/cloudinsight/what-is-the-latency#readme",
   "dependencies": {
     "lodash.isnull": "^3.0.0",
+    "raven": "^0.12.3",
     "request": "^2.79.0",
     "request-promise": "^4.1.1"
   }
