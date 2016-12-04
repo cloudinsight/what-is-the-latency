@@ -1,10 +1,15 @@
 const request = require('request-promise');
 const isNull = require('lodash.isnull');
 const stringify = require('querystring').stringify;
+const version = require('./package.json').version;
+const isDocker = require('is-docker');
 
 // sentry
 const raven = require('raven');
-const client = new raven.Client('https://a9f2505ae7ef4e71846fdab33d62c322:62206c13c5cf4807815ad7b18727c25e@sentry.cloudinsight.cc/10');
+const client = new raven.Client('https://a9f2505ae7ef4e71846fdab33d62c322:62206c13c5cf4807815ad7b18727c25e@sentry.cloudinsight.cc/10', {
+  release: version,
+  environment: isDocker() ? 'production' : 'development'
+});
 client.patchGlobal();
 client.on('error', e => console.error(e));
 
@@ -63,7 +68,11 @@ const check = () => {
   const url = `https://cloud.oneapm.com/v1/query.json?${stringify(params)}`;
   request.get(url, (error, res, responseText) => {
     if (error) {
-      client.captureException(error);
+      client.captureException(error, {
+        tags: {
+          url: url
+        }
+      });
       return;
     }
     try {

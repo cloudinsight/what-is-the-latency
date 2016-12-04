@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/cloudinsight/what-is-the-latency#readme",
   "dependencies": {
+    "is-docker": "^1.1.0",
     "lodash.isnull": "^3.0.0",
     "raven": "^0.12.3",
     "request": "^2.79.0",
