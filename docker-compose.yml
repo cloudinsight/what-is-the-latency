@@ -3,10 +3,15 @@ services:
   app:
     build: .
     links:
-     - influxdb:db
+     - influxdb
   influxdb:
     image: influxdb:alpine
     ports:
      - '8086:8086'
      - '8083:8083'
+  env:
+    image: alpine
+    command: cat /etc/hosts
+    links:
+      - influxdb:db
 
