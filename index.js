@@ -1,31 +1,26 @@
 const request = require('request-promise');
 const isNull = require('lodash.isnull');
 const stringify = require('querystring').stringify;
-const raven = require('raven');
 
 // sentry
+const raven = require('raven');
 const client = new raven.Client('https://a9f2505ae7ef4e71846fdab33d62c322:62206c13c5cf4807815ad7b18727c25e@sentry.cloudinsight.cc/10');
 client.patchGlobal();
 client.on('error', e => console.error(e));
 
 // get parameters
-const token = 'c4574494bb874afcab772d3f91fa7aad';
 const db = process.env.DB;
 const influxdb_host = process.env.INFLUXDB_HOST;
 const influxdb_port = 8086;
 const interval = Math.max(parseInt(process.env.SCAN_INTERVAL || 3000, 10), 1000);
 
-const params = {
-  q: 'avg:base.counter.1s.1',
-  begin: 180000,
-  token: token,
-  interval: 10
-};
-const url = `https://cloud.oneapm.com/v1/query.json?${stringify(params)}`;
-
 // / begin
-let lastPoint;
+let lastPoint = null;
 
+/**
+ * 创建数据库
+ * @returns {Promise.<TResult>}
+ */
 const createDatabase = () => {
   return request.post({
     url: `http://${influxdb_host}:${influxdb_port}/query`,
@@ -42,17 +37,33 @@ const createDatabase = () => {
     client.captureException(e, function () {
       console.log(arguments)
     });
-  })
+  });
 };
 
-const writeLatency = latency => request.post({
+/**
+ * 写入延迟
+ * @param latency
+ * @index 距离最后的位置
+ */
+const writeLatency = (latency, index) => request.post({
   url: `http://${influxdb_host}:${influxdb_port}/write?db=${db}`,
-  body: `latency value=${latency} ${Date.now()}000000`
+  body: `latency value=${latency},index=${index},rss=${process.memoryUsage().rss},heap=${process.memoryUsage().heapUsed} ${Date.now()}000000`
 });
 
+/**
+ * 获得延迟
+ */
 const check = () => {
+  const params = {
+    q: 'avg:base.counter.1s.1',
+    begin: 180000,
+    token: 'c4574494bb874afcab772d3f91fa7aad',
+    interval: 10
+  };
+  const url = `https://cloud.oneapm.com/v1/query.json?${stringify(params)}`;
   request.get(url, (error, res, responseText) => {
     if (error) {
+      client.captureException(error);
       return;
     }
     try {
@@ -63,13 +74,17 @@ const check = () => {
         i--;
         if (!isNull(pointList[keys[i]])) {
           if (keys[i] !== lastPoint) {
+            if (!isNull(lastPoint)) {
+              const index = keys.length - i;
+              writeLatency(Date.now() - 1000 * keys[i], index);
+            }
             lastPoint = keys[i];
-            writeLatency(2500 + Date.now() - 1000 * keys[i]);
           }
           break;
         }
       }
     } catch (e) {
+      client.captureException(e);
     }
   });
 };
