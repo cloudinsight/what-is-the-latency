@@ -4,9 +4,7 @@ const stringify = require('querystring').stringify;
 const raven = require('raven');
 
 // sentry
-const client = new raven.Client('https://a9f2505ae7ef4e71846fdab33d62c322:62206c13c5cf4807815ad7b18727c25e@sentry.cloudinsight.cc/10', {
-  transport: new raven.transports.HTTPSTransport({ rejectUnauthorized: false })
-});
+const client = new raven.Client('https://a9f2505ae7ef4e71846fdab33d62c322:62206c13c5cf4807815ad7b18727c25e@sentry.cloudinsight.cc/10');
 client.patchGlobal();
 client.on('error', e => console.error(e));
 
