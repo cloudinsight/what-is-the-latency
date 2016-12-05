@@ -18,6 +18,7 @@ const db = process.env.DB;
 const influxdb_host = process.env.INFLUXDB_HOST;
 const influxdb_port = 8086;
 const interval = Math.max(parseInt(process.env.SCAN_INTERVAL || 3000, 10), 1000);
+const token = process.env.TOKEN;
 
 // / begin
 let lastPoint = null;
@@ -62,7 +63,7 @@ const check = () => {
   const params = {
     q: 'avg:base.counter.1s.1',
     begin: 180000,
-    token: 'c4574494bb874afcab772d3f91fa7aad',
+    token: token,
     interval: 10
   };
   const url = `https://cloud.oneapm.com/v1/query.json?${stringify(params)}`;
