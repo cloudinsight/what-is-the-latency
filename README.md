@@ -4,7 +4,7 @@
 
 > 监控仪表盘里最后一个有数据的点距离当前时间的差
 
-![](https://github.com/cloudinsight/what-is-the-latency/raw/master/screenshot.png)
+![](https://github.com/cloudinsight/what-is-the-latency/raw/master/latency.png)
 
 可近似地认为这个值是用户对于系统实时性的感受，不过这个值会受到很多因素的影响
 
@@ -14,6 +14,10 @@
 - 消息系统的延迟
 - 上传数据的间隔
 - Bucket 的大小
+
+**Grafana 显示效果**
+
+![](https://github.com/cloudinsight/what-is-the-latency/raw/master/screenshot.png)
 
 ### 启动
 
