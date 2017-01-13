@@ -1,113 +1,67 @@
-const request = require('request-promise');
-const isNull = require('lodash.isnull');
-const stringify = require('querystring').stringify;
 const version = require('./package.json').version;
 const isDocker = require('is-docker');
+const assert = require('assert');
+const debug = require('debug')('what-is-the-latency');
+const getLastPointTimestamp = require('./lib').getLastPointTimestamp;
+const writeLatency = require('./lib').writeLatency;
+
+// get configuration
+const influxdbUrl = process.env.INFLUXDB_URL;
+const queryUrl = process.env.QUERY_URL;
+const interval = Math.max(parseInt(process.env.SCAN_INTERVAL || '5000', 10), 1000);
+const raven = require('raven');
+
+assert(process.env.INFLUXDB_URL, 'must provide indluxdb url');
+assert(process.env.QUERY_URL, 'must provide query url');
 
 // sentry
-const raven = require('raven');
-const client = new raven.Client('https://a9f2505ae7ef4e71846fdab33d62c322:62206c13c5cf4807815ad7b18727c25e@sentry.cloudinsight.cc/10', {
+const sentryTags = {
   release: version,
   environment: isDocker() ? 'production' : 'development'
-});
+};
+const client = new raven.Client('https://a9f2505ae7ef4e71846fdab33d62c322:62206c13c5cf4807815ad7b18727c25e@sentry.cloudinsight.cc/10', sentryTags);
 client.patchGlobal();
-client.on('error', e => console.error(e));
+client.on('error', e => debug(e.message));
 
-// get parameters
-const db = process.env.DB;
-const influxdb_host = process.env.INFLUXDB_HOST;
-const influxdb_port = 8086;
-const interval = Math.max(parseInt(process.env.SCAN_INTERVAL || 3000, 10), 1000);
-const token = process.env.TOKEN;
-
-// / begin
-let lastPoint = null;
-
-/**
- * 创建数据库
- * @returns {Promise.<TResult>}
- */
-const createDatabase = () => {
-  return request.post({
-    url: `http://${influxdb_host}:${influxdb_port}/query`,
-    form: {
-      q: `CREATE DATABASE ${db}`
-    }
-  }).then(() => {
-    const message = `ok: created database ${db} on ${influxdb_host}:${influxdb_port}`;
-    client.captureMessage(message, {
-      level: 'debug'
-    });
-    console.log(message);
-  }).catch(e => {
-    client.captureException(e, function () {
-      console.log(arguments)
-    });
-  });
-};
-
-/**
- * 写入延迟
- * @param latency
- * @index 距离最后的位置
- */
-const writeLatency = (latency, index) => request.post({
-  url: `http://${influxdb_host}:${influxdb_port}/write?db=${db}`,
-  body: `latency value=${latency},index=${index},rss=${process.memoryUsage().rss},heap=${process.memoryUsage().heapUsed} ${Date.now()}000000`
-});
-
-/**
- * 获得延迟
- */
-const check = () => {
-  const params = {
-    q: 'avg:base.counter.1s.1',
-    begin: 180000,
-    token: token,
-    interval: 10
-  };
-  const url = `https://cloud.oneapm.com/v1/query.json?${stringify(params)}`;
-  request.get(url, (error, res, responseText) => {
-    if (error) {
-      client.captureException(error, {
-        tags: {
-          url: url
-        }
-      });
-      return;
-    }
-    try {
-      const pointList = JSON.parse(responseText).result[0].pointlist;
-      const keys = Object.keys(pointList);
-      let i = keys.length;
-      while (i >= 0) {
-        i--;
-        if (!isNull(pointList[keys[i]])) {
-          if (keys[i] !== lastPoint) {
-            if (!isNull(lastPoint)) {
-              const index = keys.length - i;
-              writeLatency(Date.now() - 1000 * keys[i], index);
-            }
-            lastPoint = keys[i];
-          }
-          break;
-        }
-      }
-    } catch (e) {
-      client.captureException(e);
-    }
-  });
-};
-
-createDatabase().then(() => {
-  check();
-  console.log(`ok: polling at ${interval}`);
-  setInterval(check, interval);
-});
-
+// process signal
 ['SIGINT', 'SIGTERM'].forEach((signal) => {
   process.on(signal, () => {
-    console.log(`exit on ${signal}`);
+    debug(`exit on ${signal}`);
     process.exit(0);
   });
 });
+
+// begin
+let lastPoint = null;
+
+const check = () => {
+  const writeOnValue = (lastPointTimestamp) => {
+    if (!lastPointTimestamp) {
+      throw new Error('no data');
+    } else if (lastPointTimestamp !== lastPoint) {
+      lastPoint = lastPointTimestamp;
+      const latency = Date.now() - (1000 * lastPointTimestamp);
+      debug(`${lastPoint}:${latency}`);
+      return writeLatency(influxdbUrl, latency);
+    } else {
+      debug(`${lastPointTimestamp}`);
+    }
+    return undefined;
+  };
+  const url = `${queryUrl}&end=${Date.now() - 5000}`;
+  getLastPointTimestamp(url)
+    .then(writeOnValue)
+    .catch((e) => {
+      debug(e.message);
+      client.captureException(e, {
+        tags: {
+          url
+        }
+      });
+    });
+};
+
+check();
+
+debug(`ok: polling at ${interval}`);
+setInterval(check, interval);

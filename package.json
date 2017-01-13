@@ -4,7 +4,7 @@
   "description": "Calculate the processing latency",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -18,10 +18,18 @@
   },
   "homepage": "https://github.com/cloudinsight/what-is-the-latency#readme",
   "dependencies": {
+    "debug": "^2.6.0",
     "is-docker": "^1.1.0",
     "lodash.isnull": "^3.0.0",
+    "object-path": "^0.11.3",
     "raven": "^0.12.3",
     "request": "^2.79.0",
     "request-promise": "^4.1.1"
+  },
+  "devDependencies": {
+    "eslint": "^3.13.1",
+    "eslint-config-airbnb-base": "^11.0.1",
+    "eslint-plugin-import": "^2.2.0",
+    "jest": "^18.1.0"
   }
 }
